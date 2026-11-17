@@ -1,0 +1,1392 @@
+/* ==========================================================================
+   Fayetteville 2-Yr Stormwater 3D Drape — Hydrologic Instrument UI
+   Token system:
+     --hydro-slate   #111921   Primary gage chassis
+     --hydro-panel   #18232E   Elevated control housing
+     --hydro-hairline#2A3B4C   Machined rule / border
+     --chalk-white   #EEF3F7   Primary crisp readout ink
+     --silt-muted    #8FA3B5   Secondary label ink
+     --gage-amber    #E59A28   Active benchmark / status accent
+   ========================================================================== */
+
+:root {
+  --hydro-slate: #111921;
+  --hydro-slate-glass: rgba(17, 25, 33, 0.90);
+  --hydro-panel: #18232E;
+  --hydro-panel-hover: #213040;
+  --hydro-hairline: #2A3B4C;
+  --chalk-white: #EEF3F7;
+  --silt-muted: #8FA3B5;
+  --gage-amber: #E59A28;
+  --gage-amber-dim: rgba(229, 154, 40, 0.16);
+  --ok-teal: #2DD4BF;
+  --danger-rose: #FB7185;
+
+  --font-display: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --shadow-chassis: 0 10px 28px rgba(5, 10, 15, 0.52), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--hydro-slate);
+  color: var(--chalk-white);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--gage-amber);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   App Root & Side-by-Side Split-Screen Stage
+   ========================================================================== */
+.app-root {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--hydro-slate);
+}
+
+.hud-topbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--hydro-slate);
+  border-bottom: 1px solid var(--hydro-hairline);
+  flex-shrink: 0;
+  z-index: 30;
+}
+
+.hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.split-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  position: relative;
+  overflow: hidden;
+}
+
+.map-pane {
+  position: relative;
+  flex: 1 1 54%;
+  min-width: 190px;
+  height: 100%;
+  overflow: hidden;
+}
+
+#cesiumContainer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+/* Subtle Center Reticle indicating live 3D-to-Street-View tracking point */
+.map-sync-reticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.78;
+  transition: opacity 140ms ease;
+}
+
+.map-sync-reticle[hidden] {
+  display: none;
+}
+
+.reticle-ring {
+  position: absolute;
+  inset: 0;
+  border: 1.5px dashed rgba(56, 189, 248, 0.8);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(17, 25, 33, 0.85);
+}
+
+.reticle-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #FACC15;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.95);
+}
+
+/* Keep Google / Cesium mandatory credits clean & legible inside mapPane */
+.cesium-viewer-bottom {
+  left: 10px !important;
+  right: 90px !important;
+  bottom: 2px !important;
+}
+
+.cesium-credit-logoContainer,
+.cesium-credit-textContainer {
+  font-size: 9.5px !important;
+  opacity: 0.82;
+}
+
+.map-hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 22px;
+  z-index: 20;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.hud-left-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 0;
+  max-width: calc(100% - 82px);
+}
+
+.hud-brand,
+.hud-hotspots {
+  background: var(--hydro-panel);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-md);
+}
+
+.hud-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  flex-shrink: 0;
+}
+
+.brand-mark {
+  width: 7px;
+  height: 26px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #FACC15 0%, #BE185D 36%, #1D4ED8 72%, #38BDF8 100%);
+  flex-shrink: 0;
+}
+
+.brand-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: -0.02em;
+  color: var(--chalk-white);
+  white-space: nowrap;
+}
+
+.brand-sub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--silt-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hud-hotspots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  overflow-x: auto;
+  flex: 1 1 380px;
+  min-width: 0;
+  scrollbar-width: none;
+}
+
+.hud-hotspots::-webkit-scrollbar {
+  display: none;
+}
+
+.hotspot-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--silt-muted);
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.hotspot-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 5px 9px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--chalk-white);
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.hotspot-btn:hover {
+  background: var(--hydro-panel-hover);
+  border-color: var(--hydro-hairline);
+}
+
+.hotspot-btn.is-active {
+  background: var(--gage-amber-dim);
+  border-color: var(--gage-amber);
+  color: #FDE68A;
+}
+
+.hotspot-depth {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--silt-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hotspot-btn.is-active .hotspot-depth {
+  color: var(--gage-amber);
+}
+
+.status-pill.is-split-active {
+  background: var(--gage-amber-dim);
+  border-color: var(--gage-amber);
+  color: #FDE68A;
+}
+
+.sv-icon-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  background: #38BDF8;
+  box-shadow: 0 0 6px #38BDF8;
+}
+
+.status-pill.is-split-active .sv-icon-dot {
+  background: var(--gage-amber);
+  box-shadow: 0 0 6px var(--gage-amber);
+}
+
+.status-pill {
+  appearance: none;
+  background: var(--hydro-panel);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.status-pill:hover {
+  background: var(--hydro-panel-hover);
+  border-color: var(--gage-amber);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gage-amber);
+  box-shadow: 0 0 8px var(--gage-amber);
+}
+
+.status-dot.is-google3d {
+  background: var(--ok-teal);
+  box-shadow: 0 0 8px var(--ok-teal);
+}
+
+/* ==========================================================================
+   Left Drape Instrument Control Deck
+   ========================================================================== */
+.hud-controls {
+  pointer-events: auto;
+  width: 256px;
+  max-width: 100%;
+  max-height: calc(100% - 70px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--hydro-slate-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-chassis);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: thin;
+}
+
+.deck-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.deck-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--hydro-hairline);
+  padding-top: 9px;
+}
+
+.deck-body[hidden] {
+  display: none;
+}
+
+.deck-header-right {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.collapse-btn {
+  appearance: none;
+  background: var(--hydro-panel);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-sm);
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--chalk-white);
+  cursor: pointer;
+}
+
+.collapse-btn:hover {
+  border-color: var(--gage-amber);
+}
+
+.deck-title {
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--silt-muted);
+}
+
+.unit-toggle {
+  display: inline-flex;
+  background: var(--hydro-panel);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.unit-btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 2px 7px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--silt-muted);
+  cursor: pointer;
+}
+
+.unit-btn.is-active {
+  background: var(--gage-amber);
+  color: #0B1016;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.control-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.control-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--chalk-white);
+}
+
+.control-value {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--gage-amber);
+  font-variant-numeric: tabular-nums;
+}
+
+.hydro-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 5px;
+  background: var(--hydro-panel);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.hydro-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--chalk-white);
+  border: 2px solid var(--gage-amber);
+  cursor: grab;
+}
+
+.hydro-slider::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--chalk-white);
+  border: 2px solid var(--gage-amber);
+  cursor: grab;
+}
+
+.segmented-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.segmented-row.two-col {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.seg-btn {
+  appearance: none;
+  background: var(--hydro-panel);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-sm);
+  padding: 5px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--silt-muted);
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.seg-btn:hover {
+  background: var(--hydro-panel-hover);
+  color: var(--chalk-white);
+}
+
+.seg-btn.is-active {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: #38BDF8;
+  color: var(--chalk-white);
+}
+
+.mesh-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hydro-hairline);
+}
+
+.stat-cell {
+  background: var(--hydro-panel);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+.stat-k {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--silt-muted);
+}
+
+.stat-v {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--chalk-white);
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+}
+
+/* ==========================================================================
+   Signature Element: Right-Edge Vertical Graduated Survey Staff Gauge
+   ========================================================================== */
+.staff-gauge {
+  pointer-events: auto;
+  width: 98px;
+  flex-shrink: 0;
+  background: var(--hydro-slate-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-chassis);
+  padding: 10px 10px 14px 9px;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+.staff-header {
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--hydro-hairline);
+  margin-bottom: 8px;
+}
+
+.staff-title {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--chalk-white);
+}
+
+.staff-unit {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--silt-muted);
+}
+
+.staff-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  margin: 6px 0;
+}
+
+.staff-rod {
+  position: relative;
+  width: 16px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(
+    0deg,
+    #BAE6FD 0%,
+    #38BDF8 14.3%,
+    #0284C7 28.6%,
+    #1D4ED8 42.9%,
+    #6D28D9 57.1%,
+    #BE185D 71.4%,
+    #F97316 85.7%,
+    #FACC15 100%
+  );
+}
+
+.staff-rod.palette-blues {
+  background: linear-gradient(
+    0deg,
+    #E0F2FE 0%,
+    #7DD3FC 18%,
+    #38BDF8 36%,
+    #0284C7 56%,
+    #1D4ED8 76%,
+    #1E3A8A 92%,
+    #172554 100%
+  );
+}
+
+.staff-rod.palette-emergency {
+  background: linear-gradient(
+    0deg,
+    #FEF08A 0%,
+    #FACC15 22%,
+    #FB923C 45%,
+    #EF4444 68%,
+    #BE123C 86%,
+    #881337 100%
+  );
+}
+
+.staff-dry-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0%;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(17, 25, 33, 0.88),
+    rgba(17, 25, 33, 0.88) 3px,
+    rgba(42, 59, 76, 0.88) 3px,
+    rgba(42, 59, 76, 0.88) 6px
+  );
+  border-top: 2px solid var(--gage-amber);
+  transition: height 80ms linear;
+}
+
+.staff-rod::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 9px,
+    rgba(17, 25, 33, 0.38) 9px,
+    rgba(17, 25, 33, 0.38) 10px
+  );
+  pointer-events: none;
+}
+
+.staff-ticks {
+  position: relative;
+  flex: 1;
+  margin-left: 6px;
+}
+
+.staff-tick {
+  position: absolute;
+  left: 0;
+  right: 0;
+  transform: translateY(50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--chalk-white);
+  font-variant-numeric: tabular-nums;
+}
+
+.staff-tick-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.staff-tick-val::before {
+  content: "";
+  width: 4px;
+  height: 1px;
+  background: var(--silt-muted);
+  flex-shrink: 0;
+}
+
+.staff-pct {
+  font-size: 8.5px;
+  color: var(--silt-muted);
+}
+
+/* Live Cursor Water-Level Needle on Staff Gauge */
+.staff-needle {
+  position: absolute;
+  left: -5px;
+  right: -4px;
+  bottom: 0%;
+  transform: translateY(50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: bottom 55ms ease-out, opacity 120ms ease;
+  z-index: 5;
+}
+
+.staff-needle.is-visible {
+  opacity: 1;
+}
+
+.staff-needle-line {
+  height: 2px;
+  background: var(--chalk-white);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.9), 0 0 0 1px var(--hydro-slate);
+}
+
+.staff-needle-tag {
+  position: absolute;
+  right: 92px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--hydro-slate);
+  border: 1px solid var(--gage-amber);
+  border-radius: var(--radius-sm);
+  padding: 3px 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: #FDE68A;
+  white-space: nowrap;
+  box-shadow: var(--shadow-chassis);
+}
+
+/* ==========================================================================
+   Bottom Gage Probe Telemetry Readout
+   ========================================================================== */
+.hud-probe {
+  pointer-events: auto;
+  background: var(--hydro-slate-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-chassis);
+  padding: 7px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+.probe-swatch {
+  width: 12px;
+  height: 28px;
+  border-radius: 2px;
+  background: var(--hydro-panel);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  flex-shrink: 0;
+}
+
+.probe-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.probe-depth {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--chalk-white);
+  font-variant-numeric: tabular-nums;
+}
+
+.probe-stage {
+  font-size: 11px;
+  color: var(--silt-muted);
+}
+
+.probe-coords {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--silt-muted);
+  border-left: 1px solid var(--hydro-hairline);
+  padding-left: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.probe-unpin {
+  appearance: none;
+  background: var(--gage-amber-dim);
+  border: 1px solid var(--gage-amber);
+  color: #FDE68A;
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.probe-unpin[hidden] {
+  display: none;
+}
+
+/* ==========================================================================
+   Google Photorealistic 3D Tiles API Key Modal / Drawer
+   ========================================================================== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(7, 11, 16, 0.72);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-backdrop[hidden] {
+  display: none;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--hydro-slate);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-chassis);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.modal-desc {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--silt-muted);
+  line-height: 1.5;
+}
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-field label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--chalk-white);
+}
+
+.modal-input {
+  width: 100%;
+  background: var(--hydro-panel);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--chalk-white);
+}
+
+.modal-hint {
+  font-size: 11px;
+  color: var(--silt-muted);
+}
+
+.modal-error {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(251, 113, 133, 0.14);
+  border: 1px solid var(--danger-rose);
+  color: #FECDD3;
+  font-size: 11.5px;
+}
+
+.modal-error[hidden] {
+  display: none;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn-secondary,
+.btn-primary {
+  appearance: none;
+  border-radius: var(--radius-sm);
+  padding: 7px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: var(--hydro-panel);
+  border: 1px solid var(--hydro-hairline);
+  color: var(--chalk-white);
+}
+
+.btn-primary {
+  background: var(--gage-amber);
+  border: 1px solid var(--gage-amber);
+  color: #0B1016;
+}
+
+/* Loading Toast */
+.loading-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  background: var(--hydro-slate-glass);
+  border: 1px solid var(--gage-amber);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #FDE68A;
+  box-shadow: var(--shadow-chassis);
+  white-space: nowrap;
+}
+
+.loading-banner[hidden] {
+  display: none;
+}
+
+/* ==========================================================================
+   Resizable Splitter + Right-Side Google Street View Pane
+   ========================================================================== */
+.split-resizer {
+  width: 6px;
+  flex-shrink: 0;
+  background: var(--hydro-slate);
+  border-left: 1px solid var(--hydro-hairline);
+  border-right: 1px solid var(--hydro-hairline);
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 25;
+  transition: background-color 120ms ease;
+}
+
+.split-resizer:hover,
+.split-resizer.is-dragging {
+  background: var(--gage-amber-dim);
+}
+
+.split-resizer[hidden] {
+  display: none;
+}
+
+.resizer-grip {
+  width: 2px;
+  height: 34px;
+  border-radius: 1px;
+  background: var(--silt-muted);
+}
+
+.sv-pane {
+  flex: 0 0 46%;
+  min-width: 190px;
+  height: 100%;
+  background: #0D141C;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sv-pane[hidden] {
+  display: none;
+}
+
+.sv-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 7px 10px;
+  background: var(--hydro-panel);
+  border-bottom: 1px solid var(--hydro-hairline);
+  flex-shrink: 0;
+}
+
+.sv-title-group {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sv-badge {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--gage-amber-dim);
+  border: 1px solid var(--gage-amber);
+  color: #FDE68A;
+  flex-shrink: 0;
+}
+
+.sv-heading-readout {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--chalk-white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.sv-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.sv-tool-btn {
+  appearance: none;
+  text-decoration: none;
+  background: var(--hydro-slate);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-sm);
+  padding: 3px 7px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--silt-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sv-tool-btn:hover {
+  color: var(--chalk-white);
+  border-color: var(--gage-amber);
+}
+
+.sv-tool-btn.is-active {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: #38BDF8;
+  color: var(--chalk-white);
+}
+
+.sv-close-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-sm);
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--silt-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sv-close-btn:hover {
+  color: var(--chalk-white);
+  border-color: var(--danger-rose);
+}
+
+.sv-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, #182635 0%, #0C131B 100%);
+}
+
+.sv-pano-canvas,
+.sv-embed-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.sv-pano-canvas[hidden],
+.sv-embed-frame[hidden],
+.sv-standby[hidden],
+.sv-water-overlay[hidden] {
+  display: none;
+}
+
+/* Simulated Flood Crest Line inside Street View */
+.sv-water-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 18%;
+  pointer-events: none;
+  z-index: 12;
+  background: linear-gradient(
+    180deg,
+    rgba(14, 165, 233, 0.34) 0%,
+    rgba(29, 78, 216, 0.52) 100%
+  );
+  transition: height 90ms ease-out;
+}
+
+.sv-water-crest-line {
+  position: relative;
+  border-top: 2px dashed #38BDF8;
+  box-shadow: 0 -1px 8px rgba(56, 189, 248, 0.55);
+}
+
+.sv-water-crest-tag {
+  position: absolute;
+  right: 10px;
+  top: -22px;
+  background: rgba(17, 25, 33, 0.9);
+  border: 1px solid #38BDF8;
+  border-radius: 3px;
+  padding: 2px 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: #BAE6FD;
+  white-space: nowrap;
+}
+
+/* Pre-Key Standby Street Gage Card */
+.sv-standby {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sv-standby-inner {
+  width: 100%;
+  max-width: 390px;
+  background: var(--hydro-slate-glass);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-chassis);
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.sv-standby-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  color: var(--gage-amber);
+}
+
+.sv-standby-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--chalk-white);
+  font-variant-numeric: tabular-nums;
+}
+
+.sv-standby-copy {
+  margin: 0;
+  font-size: 12px;
+  color: var(--silt-muted);
+  line-height: 1.45;
+}
+
+.sv-scale-card {
+  background: var(--hydro-panel);
+  border: 1px solid var(--hydro-hairline);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sv-scale-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--silt-muted);
+}
+
+.sv-scale-header strong {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--chalk-white);
+}
+
+.sv-scale-benchmarks {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.sv-bench {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--silt-muted);
+}
+
+.sv-bench-bar {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--hydro-hairline);
+  flex-shrink: 0;
+}
+
+.sv-bench.is-submerged {
+  color: #FDE68A;
+}
+
+.sv-bench.is-submerged .sv-bench-bar {
+  background: #38BDF8;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.7);
+}
+
+.sv-inline-key {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.sv-standby-note {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--silt-muted);
+  line-height: 1.4;
+}
+
+.sv-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  background: var(--hydro-panel);
+  border-top: 1px solid var(--hydro-hairline);
+  flex-shrink: 0;
+}
+
+.sv-footer-meta {
+  min-width: 0;
+}
+
+.sv-footer-depth {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--chalk-white);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sv-footer-stage {
+  font-size: 10.5px;
+  color: var(--silt-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive adjustments for side-panel / compact widths */
+@media (max-width: 960px) {
+  .brand-sub,
+  .probe-coords,
+  .staff-pct {
+    display: none;
+  }
+  .hud-controls {
+    width: 212px;
+    padding: 8px 9px;
+  }
+  .staff-gauge {
+    width: 66px;
+    padding: 7px 6px 10px 6px;
+  }
+  .staff-needle-tag {
+    right: 62px;
+  }
+  .probe-depth {
+    font-size: 12px;
+  }
+  .sv-standby {
+    padding: 10px;
+  }
+  .sv-standby-inner {
+    padding: 11px;
+    gap: 8px;
+  }
+  .sv-scale-benchmarks {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

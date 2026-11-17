@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fayetteville 2-Yr Flood Inundation · Google 3D Maps + Street View</title>
+
+  <!-- Fonts: Space Grotesk (Display), Plus Jakarta Sans (Controls), IBM Plex Mono (Telemetry) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+
+  <!-- CesiumJS 1.147.0 for Google Photorealistic 3D Tiles + ImageryLayer 3D Draping -->
+  <script src="https://cdn.jsdelivr.net/npm/cesium@1.147.0/Build/Cesium/Cesium.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/cesium@1.147.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-root">
+    <!-- Top Instrument Bar -->
+    <header class="hud-topbar">
+      <div class="hud-brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div>
+          <div class="brand-title">FAYETTEVILLE · 2-YR INUNDATION</div>
+          <div class="brand-sub" id="brandSummary">Loading 205,297-cell 2D mesh…</div>
+        </div>
+      </div>
+
+      <nav class="hud-hotspots" id="hotspotBar" aria-label="Watershed flood hotspots">
+        <span class="hotspot-label">Fly to</span>
+        <button type="button" class="hotspot-btn" data-preset="overview">
+          Corridor Overview
+        </button>
+      </nav>
+
+      <div class="hud-actions">
+        <button
+          type="button"
+          class="status-pill"
+          id="btnToggleStreetView"
+          aria-pressed="false"
+          title="Toggle side-by-side Google Street View on the right half of the screen"
+        >
+          <span class="sv-icon-dot" aria-hidden="true"></span>
+          <span>Street View</span>
+        </button>
+
+        <button
+          type="button"
+          class="status-pill"
+          id="btnBasemapKey"
+          title="Configure Google Maps Platform API key for Photorealistic 3D Tiles & Street View"
+        >
+          <span class="status-dot" id="basemapDot"></span>
+          <span id="basemapLabel">Google Key</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Split-Screen Stage: Left = 3D Draped Flood Map, Right = Synchronized Google Street View -->
+    <main class="split-stage" id="splitStage">
+      <!-- LEFT PANE: Google Photorealistic 3D Maps + GPU Draped Flood Mesh -->
+      <section class="map-pane" id="mapPane" aria-label="3D Flood Depth Map">
+        <div id="cesiumContainer"></div>
+
+        <div class="loading-banner" id="loadingBanner">
+          Streaming 4.7 MB GPU flood mesh (213,075 triangles)…
+        </div>
+
+        <div class="map-hud">
+          <div class="hud-left-stack">
+            <aside class="hud-controls" id="controlsDeck" aria-label="Flood drape controls">
+              <div class="deck-header">
+                <span class="deck-title">Drape</span>
+                <div class="deck-header-right">
+                  <div class="unit-toggle" role="group" aria-label="Depth units">
+                    <button type="button" class="unit-btn is-active" data-unit="ft">FT</button>
+                    <button type="button" class="unit-btn" data-unit="m">M</button>
+                  </div>
+                  <button
+                    type="button"
+                    class="collapse-btn"
+                    id="btnToggleDeck"
+                    title="Minimize or expand controls"
+                    aria-expanded="true"
+                  >−</button>
+                </div>
+              </div>
+
+              <div class="deck-body" id="deckBody">
+                <div class="control-group">
+                  <div class="control-row">
+                    <label class="control-label" for="sliderCutoff">Dry-ground cutoff</label>
+                    <span class="control-value" id="valCutoff">0.05 ft</span>
+                  </div>
+                  <input
+                    type="range"
+                    id="sliderCutoff"
+                    class="hydro-slider"
+                    min="0"
+                    max="3.0"
+                    step="0.01"
+                    value="0.05"
+                  />
+                </div>
+
+                <div class="control-group">
+                  <div class="control-row">
+                    <label class="control-label" for="sliderOpacity">Drape opacity</label>
+                    <span class="control-value" id="valOpacity">84%</span>
+                  </div>
+                  <input
+                    type="range"
+                    id="sliderOpacity"
+                    class="hydro-slider"
+                    min="0.15"
+                    max="1.0"
+                    step="0.01"
+                    value="0.84"
+                  />
+                </div>
+
+                <div class="control-group">
+                  <span class="control-label">Depth color scale</span>
+                  <div class="segmented-row" role="group" aria-label="Color palette">
+                    <button type="button" class="seg-btn is-active" data-palette="0">Hazard</button>
+                    <button type="button" class="seg-btn" data-palette="1">Blues</button>
+                    <button type="button" class="seg-btn" data-palette="2">Crest</button>
+                  </div>
+                </div>
+
+                <div class="control-group">
+                  <span class="control-label">Surface rendering</span>
+                  <div class="segmented-row two-col" role="group" aria-label="Mesh rendering style">
+                    <button type="button" class="seg-btn is-active" data-shading="smooth">Smooth</button>
+                    <button type="button" class="seg-btn" data-shading="cells">Exact Cells</button>
+                  </div>
+                </div>
+
+                <div class="control-group">
+                  <span class="control-label">Camera angle</span>
+                  <div class="segmented-row" role="group" aria-label="Camera pitch preset">
+                    <button type="button" class="seg-btn is-active" data-cam="oblique">3D Tilt</button>
+                    <button type="button" class="seg-btn" data-cam="street">Low 3D</button>
+                    <button type="button" class="seg-btn" data-cam="nadir">Top-Down</button>
+                  </div>
+                </div>
+
+                <div class="mesh-stats">
+                  <div class="stat-cell">
+                    <div class="stat-k">Visible Cells</div>
+                    <div class="stat-v" id="statWetCells">175,797</div>
+                  </div>
+                  <div class="stat-cell">
+                    <div class="stat-k">Peak Depth</div>
+                    <div class="stat-v" id="statMaxDepth">10.50 ft</div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+
+            <!-- Bottom Live Gage Probe Readout -->
+            <footer class="hud-probe" aria-live="polite">
+              <div class="probe-swatch" id="probeSwatch"></div>
+              <div class="probe-main">
+                <div class="probe-depth" id="probeDepth">Hover or click any flooded street</div>
+                <div class="probe-stage" id="probeStage">2yr.json · 205,297 polygons draped on 3D surface</div>
+              </div>
+              <div class="probe-coords" id="probeCoords">35.0603°N, 78.8903°W</div>
+              <button type="button" class="probe-unpin" id="btnUnpin" hidden>Unpin</button>
+            </footer>
+          </div>
+
+          <!-- Signature Element: Vertical Graduated Survey Staff Gauge -->
+          <aside class="staff-gauge" aria-label="Flood depth staff gauge">
+            <div class="staff-header">
+              <div class="staff-title">DEPTH2D</div>
+              <div class="staff-unit" id="staffUnitLabel">STAFF (FT)</div>
+            </div>
+            <div class="staff-body">
+              <div class="staff-rod" id="staffRod">
+                <div class="staff-dry-mask" id="staffDryMask"></div>
+              </div>
+              <div class="staff-ticks" id="staffTicks"></div>
+              <div class="staff-needle" id="staffNeedle">
+                <div class="staff-needle-line"></div>
+                <div class="staff-needle-tag" id="staffNeedleTag">0.00 ft</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- DRAGGABLE SPLIT DIVIDER -->
+      <div
+        class="split-resizer"
+        id="splitResizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize 3D map and Google Street View split"
+        tabindex="0"
+        hidden
+      >
+        <div class="resizer-grip"></div>
+      </div>
+
+      <!-- RIGHT PANE: Synchronized Google Street View -->
+      <section class="sv-pane" id="streetViewPane" aria-label="Google Street View side-by-side" hidden>
+        <header class="sv-topbar">
+          <div class="sv-title-group">
+            <span class="sv-badge">STREET VIEW</span>
+            <span class="sv-heading-readout" id="svHeadingText">165° SSE · W Rowan St</span>
+          </div>
+          <div class="sv-toolbar">
+            <button
+              type="button"
+              class="sv-tool-btn is-active"
+              id="btnFollowMap"
+              aria-pressed="true"
+              title="Automatically sync Street View position and heading as you pan or rotate the left 3D map"
+            >
+              Sync Move
+            </button>
+            <button
+              type="button"
+              class="sv-tool-btn is-active"
+              id="btnFloodOverlay"
+              title="Toggle simulated flood water level overlay inside Street View"
+            >
+              Water Line
+            </button>
+            <a
+              class="sv-tool-btn"
+              id="linkExternalSV"
+              href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=35.060316,-78.89025&heading=165&pitch=0&fov=80"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open this exact Street View angle in a new Google Maps tab"
+            >
+              Pop Out ↗
+            </a>
+            <button
+              type="button"
+              class="sv-close-btn"
+              id="btnCloseSV"
+              title="Close Street View pane"
+              aria-label="Close Street View pane"
+            >×</button>
+          </div>
+        </header>
+
+        <div class="sv-viewport">
+          <!-- Interactive 360° Google Maps JS StreetViewPanorama -->
+          <div id="svPanorama" class="sv-pano-canvas" hidden></div>
+
+          <!-- Fallback Google Maps Embed API Street View iframe -->
+          <iframe
+            id="svEmbedFrame"
+            class="sv-embed-frame"
+            title="Google Street View Embed"
+            allowfullscreen
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            hidden
+          ></iframe>
+
+          <!-- Calibrated Street-Level Flood Water Overlay -->
+          <div class="sv-water-overlay" id="svWaterOverlay" hidden>
+            <div class="sv-water-crest-line">
+              <span class="sv-water-crest-tag" id="svWaterTag">2-YR FLOOD CREST · 0.82 ft</span>
+            </div>
+          </div>
+
+          <!-- Pre-Key / Standby Inspection Card (shown until Google API key is entered) -->
+          <div class="sv-standby" id="svStandbyCard">
+            <div class="sv-standby-inner">
+              <div class="sv-standby-eyebrow">SYNCHRONIZED STREET-LEVEL GAGE</div>
+              <h3 class="sv-standby-title" id="svStandbyLocation">35.06032°N, 78.89025°W</h3>
+              <p class="sv-standby-copy">
+                Pan, zoom, or rotate the left 3D map and this pane tracks the STREET VIEW marker in real time. Paste your Google Maps API key below to render live 360° Street View here and Photorealistic 3D Tiles on the left.
+              </p>
+
+              <!-- Visual Human / Vehicle Flood Depth Reference Scale -->
+              <div class="sv-scale-card">
+                <div class="sv-scale-header">
+                  <span>Roadway flood depth</span>
+                  <strong id="svScaleValue">0.82 ft (9.8 in)</strong>
+                </div>
+                <div class="sv-scale-benchmarks">
+                  <div class="sv-bench" data-thresh="0.5">
+                    <span class="sv-bench-bar"></span>
+                    <span>Curb (0.5 ft)</span>
+                  </div>
+                  <div class="sv-bench" data-thresh="1.15">
+                    <span class="sv-bench-bar"></span>
+                    <span>Tire Hub (1.2 ft)</span>
+                  </div>
+                  <div class="sv-bench" data-thresh="1.5">
+                    <span class="sv-bench-bar"></span>
+                    <span>Door Sill (1.5 ft)</span>
+                  </div>
+                  <div class="sv-bench" data-thresh="3.0">
+                    <span class="sv-bench-bar"></span>
+                    <span>Car Hood (3.0 ft)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sv-inline-key">
+                <input
+                  type="password"
+                  id="svInlineKeyInput"
+                  class="modal-input"
+                  placeholder="Paste Google Maps API Key (AIzaSy...)"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <button type="button" class="btn-primary" id="btnSvActivateKey">
+                  Activate 3D + Street View
+                </button>
+              </div>
+              <p class="sv-standby-note" id="svStandbyStatus">
+                Uses <em>Maps JavaScript API</em> (2-way sync) or free <em>Maps Embed API</em>. Or click <strong>Pop Out ↗</strong> above with no key.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Street-Level Flood Depth Telemetry -->
+        <footer class="sv-footer">
+          <div class="probe-swatch" id="svSwatch"></div>
+          <div class="sv-footer-meta">
+            <div class="sv-footer-depth" id="svFooterDepth">At Street Camera: 0.82 ft (9.8 in · 0.25 m)</div>
+            <div class="sv-footer-stage" id="svFooterStage">Roadway Crown Inundation · Click left map to relocate</div>
+          </div>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <!-- Google Photorealistic 3D Maps + Street View API Key Modal -->
+  <div class="modal-backdrop" id="keyModal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h2 class="modal-title" id="modalTitle">Google 3D Maps &amp; Street View Key</h2>
+      <p class="modal-desc">
+        One <strong>Google Maps Platform API Key</strong> powers both <strong>Photorealistic 3D Tiles</strong> (left) and <strong>360° Street View</strong> (right). Enable <em>Map Tiles API</em> and <em>Maps JavaScript API</em> (or <em>Maps Embed API</em>) in Google Cloud. Saved in local browser storage only.
+      </p>
+
+      <div class="modal-field">
+        <label for="inputGoogleKey">Google Maps API Key</label>
+        <input
+          type="password"
+          id="inputGoogleKey"
+          class="modal-input"
+          placeholder="AIzaSy..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="modal-field">
+        <label for="inputIonToken">Optional: Cesium ion Access Token (for 3D Tiles via Asset 2275207)</label>
+        <input
+          type="password"
+          id="inputIonToken"
+          class="modal-input"
+          placeholder="eyJhbGciOi..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <p class="modal-error" id="modalError" hidden></p>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="btnUseAerial">Aerial Fallback</button>
+        <button type="button" class="btn-primary" id="btnConnect3D">Activate Google 3D + Street View</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

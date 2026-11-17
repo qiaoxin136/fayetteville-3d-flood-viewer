@@ -1,0 +1,145 @@
+{
+  "sourceFile": "2yr.json",
+  "eventLabel": "2-Year Design Storm",
+  "featureCount": 205297,
+  "vertexCount": 127181,
+  "triangleCount": 213075,
+  "wetAreaAcres": 196.8,
+  "wetAreaSqKm": 0.8,
+  "bbox": {
+    "west": -78.910216,
+    "south": 35.049439,
+    "east": -78.87142,
+    "north": 35.129095
+  },
+  "mercBounds": {
+    "mx0": 0.2808049558358534,
+    "my0": 0.3956597198154888,
+    "mxSpan": 0.00010776561020431341,
+    "mySpan": 0.00027041047138026686
+  },
+  "center": {
+    "lon": -78.890818,
+    "lat": 35.089267
+  },
+  "depthStats": {
+    "min": 0.002,
+    "p25": 0.091,
+    "median": 0.383,
+    "p75": 0.969,
+    "p90": 1.795,
+    "p95": 2.623,
+    "p99": 4.519,
+    "max": 10.5
+  },
+  "bands": [
+    {
+      "min": 0.0,
+      "max": 0.1,
+      "label": "0.00 \u2013 0.10",
+      "stage": "Trace / Sheet Film",
+      "count": 53898,
+      "pct": 26.3
+    },
+    {
+      "min": 0.1,
+      "max": 0.25,
+      "label": "0.10 \u2013 0.25",
+      "stage": "Gutter Ponding",
+      "count": 31032,
+      "pct": 15.1
+    },
+    {
+      "min": 0.25,
+      "max": 0.5,
+      "label": "0.25 \u2013 0.50",
+      "stage": "Curb Overtopping",
+      "count": 29547,
+      "pct": 14.4
+    },
+    {
+      "min": 0.5,
+      "max": 1.0,
+      "label": "0.50 \u2013 1.00",
+      "stage": "Roadway Crown",
+      "count": 41290,
+      "pct": 20.1
+    },
+    {
+      "min": 1.0,
+      "max": 2.0,
+      "label": "1.00 \u2013 2.00",
+      "stage": "Vehicle Stall Risk",
+      "count": 32400,
+      "pct": 15.8
+    },
+    {
+      "min": 2.0,
+      "max": 5.0,
+      "label": "2.00 \u2013 5.00",
+      "stage": "Structural Inundation",
+      "count": 15663,
+      "pct": 7.6
+    },
+    {
+      "min": 5.0,
+      "max": 11.0,
+      "label": "5.00 \u2013 10.5",
+      "stage": "Deep Channel / Crest",
+      "count": 1467,
+      "pct": 0.7
+    }
+  ],
+  "hotspots": [
+    {
+      "score": 49.48959376346211,
+      "lon": -78.890254,
+      "lat": 35.060033,
+      "maxDepth": 10.5,
+      "p90Depth": 6.73,
+      "deepCells": 907,
+      "name": "W Rowan St / Haymount",
+      "subtitle": "Cross Creek channel & overbank"
+    },
+    {
+      "score": 48.33697511422798,
+      "lon": -78.895532,
+      "lat": 35.11358,
+      "maxDepth": 9.1,
+      "p90Depth": 6.23,
+      "deepCells": 1401,
+      "name": "Country Club North",
+      "subtitle": "Warrenwood northern tributary"
+    },
+    {
+      "score": 31.17337162962039,
+      "lon": -78.878011,
+      "lat": 35.054087,
+      "maxDepth": 9.06,
+      "p90Depth": 6.73,
+      "deepCells": 63,
+      "name": "Green St / Downtown",
+      "subtitle": "Historic Cross Creek crossing"
+    },
+    {
+      "score": 30.731614968831572,
+      "lon": -78.889009,
+      "lat": 35.074876,
+      "maxDepth": 5.49,
+      "p90Depth": 3.65,
+      "deepCells": 2661,
+      "name": "Edgecombe / Chestnut Hill",
+      "subtitle": "Broad neighborhood inundation"
+    },
+    {
+      "score": 24.42621258308802,
+      "lon": -78.888167,
+      "lat": 35.094836,
+      "maxDepth": 5.62,
+      "p90Depth": 3.94,
+      "deepCells": 297,
+      "name": "Rosehill Rd Corridor",
+      "subtitle": "Mid-watershed residential basin"
+    }
+  ]
+}
